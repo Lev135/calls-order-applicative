@@ -1,0 +1,33 @@
+cabal-version:      3.0
+name:               calls-order-applicative
+version:            0.1.0.0
+
+synopsis:           Reorder evaluation using applicative interface
+description:
+homepage:
+bug-reports:
+
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             Lev Dvorkin
+maintainer:         lev_135@mail.ru
+copyright:          (c) 2022, Lev Dvorkin
+
+category:           Control
+extra-source-files: CHANGELOG.md
+
+library
+    exposed-modules:  Control.Applicative.Calculation
+                      Control.Applicative.Calculation.Internal
+    build-depends:    base >= 4.0
+    hs-source-dirs:   src
+    default-language: Haskell2010
+
+test-suite calls-order-applicative-test
+    default-language: Haskell2010
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Spec.hs
+    build-depends:    base
+                    , hspec
+                    , quickcheck
