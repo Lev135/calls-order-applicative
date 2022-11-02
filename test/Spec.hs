@@ -20,6 +20,11 @@ import Control.Monad.Writer (MonadWriter(tell), Writer)
 import Test.Hspec
 import Test.QuickCheck
 
+reduce :: OrdCalc x y a -> OrdCalc x y a
+reduce = \case
+  App (Pure a) (Pure b) -> Pure (a b)
+  x                     -> x
+
 calcSize :: OrdCalc x y a -> Int
 calcSize = \case
   Pure a     -> 1
@@ -43,18 +48,16 @@ logger f x = tell [x] >> pure (f x)
 type CompInt = Int -> Int -> Ordering
 
 equivCalc :: IntCalc Int -> IntCalc Int -> Int -> CompInt -> Property
-equivCalc ca ca' x comp = collect (Approx $ calcSize ca) $ conjoin
+equivCalc ca ca' x comp = collect (Approx $ calcSize $ reduce ca) $ conjoin
   [ runCalcM k ca === runCalcM k ca'
   , runCalcSortBy comp k ca === runCalcSortBy comp k ca'
+  , snd (enumerateCalls 0 ca) === snd (enumerateCalls 0 ca')
   ]
   where k = logger (+ x)
 infix 1 `equivCalc`
 
 arbitraryInt :: Gen (IntCalc Int)
 arbitraryInt = arbitrary
-
-class Shrinkable a where
-  myShrink :: a -> [a]
 
 shrinkCalc :: IntCalc a -> [IntCalc a]
 shrinkCalc = \case
@@ -64,7 +67,7 @@ shrinkCalc = \case
   Call n     -> Pure <$> shrink n <|> Call <$> shrink n
 
 instance Arbitrary (IntCalc Int) where
-  arbitrary = frequency $ zip [1, 3, 2]
+  arbitrary = frequency $ zip [1, 4, 3]
     [ Pure <$> arbitrary
     , App <$> arbitrary <*> arbitraryInt
     , Call <$> arbitrary
@@ -110,8 +113,9 @@ instance Show x => Show (OrdCalc x y a) where
 prop_fmap_id, prop_identity :: IntCalc Int -> Int -> CompInt -> Property
 prop_fmap_id ca = id <$> ca `equivCalc` ca
 prop_identity v = pure id <*> v `equivCalc` v
-prop_composition :: IntCalc (Int -> Int) -> IntCalc (Int -> Int) -> IntCalc Int -> Int -> CompInt -> Property
-prop_composition u v w = pure (.) <*> u <*> v <*> w `equivCalc` u <*> (v <*> w)
+prop_composition :: IntCalc (Int -> Int) -> IntCalc (Int -> Int) -> IntCalc Int -> Int -> Property
+prop_composition u v w = (pure (.) <*> u <*> v <*> w) `eq` (u <*> (v <*> w))
+  where eq a b n = equivCalc a b n \_ _ -> EQ
 prop_homomorphism :: (Int -> Int) -> Int -> Int -> CompInt -> Property
 prop_homomorphism f x = pure f <*> pure x `equivCalc` pure (f x)
 prop_interchange :: IntCalc (Int -> Int) -> Int -> Int -> CompInt -> Property
