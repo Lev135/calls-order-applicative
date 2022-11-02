@@ -29,5 +29,7 @@ test-suite my-test
     hs-source-dirs:   test
     main-is:          Spec.hs
     build-depends:    base
+                    , mtl
                     , hspec
                     , QuickCheck
+                    , calls-order-applicative

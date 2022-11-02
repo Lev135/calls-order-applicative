@@ -59,7 +59,7 @@ enumerateCalls i0 ca = let (ca', xs, _) = go i0 [] ca in (ca', xs)
   where
     go :: Enum i => i -> [(i, x)] -> OrdCalc x y a -> (OrdCalc i y a, [(i, x)], i)
     go i res = \case
-      Pure a     -> (Pure a, mempty, i)
+      Pure a     -> (Pure a, res, i)
       App cab ca -> (App cab' ca', res'', i'')
         where
           (cab', res', i') = go i res cab
