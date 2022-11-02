@@ -3,7 +3,7 @@
 {-# LANGUAGE LambdaCase     #-}
 {-# LANGUAGE TupleSections  #-}
 module Main where
-import Control.Monad.OrdCall (OrdCall, call, runCalcSort)
+import Control.Monad.OrdCall (OrdCall, call, runOrdCallSort)
 import Control.Monad.State (State, evalState, gets, modify, runState)
 import Data.Bifunctor (Bifunctor(..))
 import Data.List (findIndex, intercalate, isPrefixOf, sortOn, tails)
@@ -82,7 +82,7 @@ renderErrors3 src = intercalate splitter
 renderErrors4 :: String -> [CompoundErr] -> String
 renderErrors4 src = intercalate splitter
                   . flip evalState (src, 0)
-                  . runCalcSort cutErrStr
+                  . runOrdCallSort cutErrStr
                   . traverse renderErr
   where
     cutErrStr :: Pos -> State RenderState String

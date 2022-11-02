@@ -5,7 +5,7 @@
   This module provides full access to raw `OrdCall` representation. Using
   functions from it is unsafe, meaning that functor and applicative can be
   violated. For most cases, you should prefer public
-  /Control.Applicative.Calculation/ interface
+  /Control.Applicative.OrdCallulation/ interface
 -}
 module Control.Monad.OrdCall.Internal where
 import Data.Functor.Identity (Identity(..))
@@ -32,23 +32,23 @@ call = Call
 --
 -- /NB!/ The result of calling this function can
 -- produce different results modulo functor and applicative laws
-dbgCalc :: Show x => OrdCall x y a -> String
-dbgCalc = \case
+dbgOrdCall :: Show x => OrdCall x y a -> String
+dbgOrdCall = \case
   Pure _     -> "Pure"
-  App ca ca' -> "(App " <> dbgCalc ca <> " " <> dbgCalc ca' <> ")"
+  App ca ca' -> "(App " <> dbgOrdCall ca <> " " <> dbgOrdCall ca' <> ")"
   Call x     -> "(Call " <> show x <> ")"
 
 -- | Run calculation using a pure external function
 --
--- prop> runCalc f = runIdentity . runCalcM (Identity . f)
-runCalc :: (x -> y) -> OrdCall x y a -> a
-runCalc f = runIdentity . runCalcM (Identity . f)
+-- prop> runOrdCall f = runIdentity . runOrdCallM (Identity . f)
+runOrdCall :: (x -> y) -> OrdCall x y a -> a
+runOrdCall f = runIdentity . runOrdCallM (Identity . f)
 
 -- | Run calculation using an effectful external function
-runCalcM :: Applicative m => (x -> m y) -> OrdCall x y a -> m a
-runCalcM f = \case
+runOrdCallM :: Applicative m => (x -> m y) -> OrdCall x y a -> m a
+runOrdCallM f = \case
   Pure a     -> pure a
-  App cab ca -> ($) <$> runCalcM f cab <*> runCalcM f ca
+  App cab ca -> ($) <$> runOrdCallM f cab <*> runOrdCallM f ca
   Call x     -> f x
 
 -- | Enumerate calls of external function, replacing them by their numbers.

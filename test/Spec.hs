@@ -22,13 +22,13 @@ reduce = \case
   App (Pure a) (Pure b) -> Pure (a b)
   x                     -> x
 
-calcSize :: OrdCall x y a -> Int
-calcSize = \case
+ordCallSize :: OrdCall x y a -> Int
+ordCallSize = \case
   Pure a     -> 1
-  App oc oc' -> calcSize oc + calcSize oc'
+  App oc oc' -> ordCallSize oc + ordCallSize oc'
   Call x     -> 1
 
-type IntCalc a = OrdCall Int Int a
+type IntOrdCall a = OrdCall Int Int a
 type Logger = Writer [Int]
 
 newtype Approx
@@ -44,52 +44,52 @@ logger f x = tell [x] >> pure (f x)
 
 type CompInt = Int -> Int -> Ordering
 
-equivCalc :: IntCalc Int -> IntCalc Int -> Int -> CompInt -> Property
-equivCalc ca ca' x comp = collect (Approx $ calcSize $ reduce ca) $ conjoin
-  [ runCalcM k ca === runCalcM k ca'
-  , runCalcSortBy comp k ca === runCalcSortBy comp k ca'
+equivOrdCall :: IntOrdCall Int -> IntOrdCall Int -> Int -> CompInt -> Property
+equivOrdCall ca ca' x comp = collect (Approx $ ordCallSize $ reduce ca) $ conjoin
+  [ runOrdCallM k ca === runOrdCallM k ca'
+  , runOrdCallSortBy comp k ca === runOrdCallSortBy comp k ca'
   , snd (enumerateCalls 0 ca) === snd (enumerateCalls 0 ca')
   ]
   where k = logger (+ x)
-infix 1 `equivCalc`
+infix 1 `equivOrdCall`
 
-arbitraryInt :: Gen (IntCalc Int)
+arbitraryInt :: Gen (IntOrdCall Int)
 arbitraryInt = arbitrary
 
-shrinkCalc :: IntCalc a -> [IntCalc a]
-shrinkCalc = \case
+shrinkOrdCall :: IntOrdCall a -> [IntOrdCall a]
+shrinkOrdCall = \case
   Pure n     -> empty
-  App a b -> [Pure (a' b') | Pure a' <- a : shrinkCalc a, Pure b' <- b : shrinkCalc b]
-          <|> App <$> shrinkCalc a <*> shrinkCalc b
+  App a b -> [Pure (a' b') | Pure a' <- a : shrinkOrdCall a, Pure b' <- b : shrinkOrdCall b]
+          <|> App <$> shrinkOrdCall a <*> shrinkOrdCall b
   Call n     -> Pure <$> shrink n <|> Call <$> shrink n
 
-instance Arbitrary (IntCalc Int) where
+instance Arbitrary (IntOrdCall Int) where
   arbitrary = frequency $ zip [1, 4, 3]
     [ Pure <$> arbitrary
     , App <$> arbitrary <*> arbitraryInt
     , Call <$> arbitrary
     ]
-  shrink = shrinkCalc
+  shrink = shrinkOrdCall
 
-instance Arbitrary (IntCalc (Int -> Int)) where
+instance Arbitrary (IntOrdCall (Int -> Int)) where
   arbitrary = oneof
     [ Pure <$> arbitrary
     , App <$> arbitrary <*> arbitraryInt
     ]
-  shrink = shrinkCalc
+  shrink = shrinkOrdCall
 
-instance Arbitrary (IntCalc (Int -> Int -> Int)) where
+instance Arbitrary (IntOrdCall (Int -> Int -> Int)) where
   arbitrary = oneof
     [ Pure <$> arbitrary
     , App <$> arbitrary <*> arbitraryInt
     ]
-  shrink = shrinkCalc
+  shrink = shrinkOrdCall
 
-instance Arbitrary (IntCalc (Int -> Int -> Int -> Int)) where
+instance Arbitrary (IntOrdCall (Int -> Int -> Int -> Int)) where
   arbitrary = Pure <$> arbitrary
 
 instance Show x => Show (OrdCall x y a) where
-  show = dbgCalc
+  show = dbgOrdCall
 
 
 {-
@@ -107,15 +107,15 @@ instance Show x => Show (OrdCall x y a) where
   Interchange
     u <*> pure y = pure ($ y) <*> u
 -}
-prop_fmap_id, prop_identity :: IntCalc Int -> Int -> CompInt -> Property
-prop_fmap_id ca = id <$> ca `equivCalc` ca
-prop_identity v = pure id <*> v `equivCalc` v
-prop_composition :: IntCalc (Int -> Int) -> IntCalc (Int -> Int) -> IntCalc Int -> Int -> CompInt -> Property
-prop_composition u v w = pure (.) <*> u <*> v <*> w `equivCalc` u <*> (v <*> w)
+prop_fmap_id, prop_identity :: IntOrdCall Int -> Int -> CompInt -> Property
+prop_fmap_id ca = id <$> ca `equivOrdCall` ca
+prop_identity v = pure id <*> v `equivOrdCall` v
+prop_composition :: IntOrdCall (Int -> Int) -> IntOrdCall (Int -> Int) -> IntOrdCall Int -> Int -> CompInt -> Property
+prop_composition u v w = pure (.) <*> u <*> v <*> w `equivOrdCall` u <*> (v <*> w)
 prop_homomorphism :: (Int -> Int) -> Int -> Int -> CompInt -> Property
-prop_homomorphism f x = pure f <*> pure x `equivCalc` pure (f x)
-prop_interchange :: IntCalc (Int -> Int) -> Int -> Int -> CompInt -> Property
-prop_interchange u y = u <*> pure y `equivCalc` pure ($ y) <*> u
+prop_homomorphism f x = pure f <*> pure x `equivOrdCall` pure (f x)
+prop_interchange :: IntOrdCall (Int -> Int) -> Int -> Int -> CompInt -> Property
+prop_interchange u y = u <*> pure y `equivOrdCall` pure ($ y) <*> u
 
 instance Show (a -> b) where
   show = const "<func>"
