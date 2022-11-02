@@ -1,37 +1,34 @@
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE TemplateHaskell            #-}
-
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use <$>" #-}
 {-# HLINT ignore "Functor law" #-}
-{-# LANGUAGE BlockArguments             #-}
-{-# LANGUAGE ConstraintKinds            #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE TupleSections              #-}
+
+{-# LANGUAGE BlockArguments    #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Main (main) where
 
 import Control.Applicative (Alternative(empty), (<|>))
-import Control.Monad.OrdCalc
-import Control.Monad.OrdCalc.Internal
+import Control.Monad.OrdCall
+import Control.Monad.OrdCall.Internal
 import Control.Monad.Writer (MonadWriter(tell), Writer)
 import Test.Hspec
 import Test.QuickCheck
 
-reduce :: OrdCalc x y a -> OrdCalc x y a
+reduce :: OrdCall x y a -> OrdCall x y a
 reduce = \case
   App (Pure a) (Pure b) -> Pure (a b)
   x                     -> x
 
-calcSize :: OrdCalc x y a -> Int
+calcSize :: OrdCall x y a -> Int
 calcSize = \case
   Pure a     -> 1
   App oc oc' -> calcSize oc + calcSize oc'
   Call x     -> 1
 
-type IntCalc a = OrdCalc Int Int a
+type IntCalc a = OrdCall Int Int a
 type Logger = Writer [Int]
 
 newtype Approx
@@ -91,13 +88,13 @@ instance Arbitrary (IntCalc (Int -> Int -> Int)) where
 instance Arbitrary (IntCalc (Int -> Int -> Int -> Int)) where
   arbitrary = Pure <$> arbitrary
 
-instance Show x => Show (OrdCalc x y a) where
+instance Show x => Show (OrdCall x y a) where
   show = dbgCalc
 
 
 {-
   Functor laws:
-    fmap id == id
+    fmap id = id
 
   Applicative laws:
 
@@ -113,9 +110,8 @@ instance Show x => Show (OrdCalc x y a) where
 prop_fmap_id, prop_identity :: IntCalc Int -> Int -> CompInt -> Property
 prop_fmap_id ca = id <$> ca `equivCalc` ca
 prop_identity v = pure id <*> v `equivCalc` v
-prop_composition :: IntCalc (Int -> Int) -> IntCalc (Int -> Int) -> IntCalc Int -> Int -> Property
-prop_composition u v w = (pure (.) <*> u <*> v <*> w) `eq` (u <*> (v <*> w))
-  where eq a b n = equivCalc a b n \_ _ -> EQ
+prop_composition :: IntCalc (Int -> Int) -> IntCalc (Int -> Int) -> IntCalc Int -> Int -> CompInt -> Property
+prop_composition u v w = pure (.) <*> u <*> v <*> w `equivCalc` u <*> (v <*> w)
 prop_homomorphism :: (Int -> Int) -> Int -> Int -> CompInt -> Property
 prop_homomorphism f x = pure f <*> pure x `equivCalc` pure (f x)
 prop_interchange :: IntCalc (Int -> Int) -> Int -> Int -> CompInt -> Property
